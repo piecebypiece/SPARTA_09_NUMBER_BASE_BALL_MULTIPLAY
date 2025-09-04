@@ -81,39 +81,3 @@ bool ANBBGameStateBase::IsGuessNumberString(const FString& InNumberString)
 
 	return bCanPlay;
 }
-
-FString ANBBGameStateBase::JudgeResult(const FString& InSecretNumberString, const FString& InGuessNumberString)
-{
-	int32 StrikeCount = 0, BallCount = 0;
-
-	for (int32 i = 0; i < 3; ++i)
-	{
-		if (InSecretNumberString[i] == InGuessNumberString[i])
-		{
-			StrikeCount++;
-		}
-		else
-		{
-			FString PlayerGuessChar = FString::Printf(TEXT("%c"), InGuessNumberString[i]);
-			if (InSecretNumberString.Contains(PlayerGuessChar))
-			{
-				BallCount++;
-			}
-		}
-	}
-
-	if (StrikeCount == 0 && BallCount == 0)
-	{
-		return TEXT("OUT");
-	}
-
-	return FString::Printf(TEXT("%dS%dB"), StrikeCount, BallCount);
-}
-
-void ANBBGameStateBase::MulticastRPCBroadcastTurnTimeout_Implementation(const FString& PlayerName)
-{
-    // 클라이언트에서 이 함수가 호출되면, UI 업데이트나 채팅 메시지 출력 등을 처리
-    // 예: FString::Printf(TEXT("%s님의 턴 시간이 초과되었습니다."), *PlayerName);
-    // 지금은 UI를 고려하지 않으므로, 로그만 출력
-    UE_LOG(LogTemp, Warning, TEXT("Player %s's turn has timed out."), *PlayerName);
-}

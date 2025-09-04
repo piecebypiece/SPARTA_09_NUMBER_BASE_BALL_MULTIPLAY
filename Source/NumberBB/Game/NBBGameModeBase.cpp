@@ -127,45 +127,43 @@ void ANBBGameModeBase::BeginPlay()
 void ANBBGameModeBase::PrintChatMessageString(ANBBPlayerController* InChattingPlayerController,
 	const FString& InChatMessageString)
 {
-    // 현재 턴인 플레이어만 추측 가능
-    if (GameState->PlayerArray.IsValidIndex(CurrentPlayerIndex))
-    {
-        ANBBPlayerState* CurrentPlayerState = Cast<ANBBPlayerState>(GameState->PlayerArray[CurrentPlayerIndex]);
-        if (CurrentPlayerState != InChattingPlayerController->GetPlayerState<ANBBPlayerState>())
-        {
-            // 턴이 아닌 플레이어의 채팅은 그냥 출력만 함
-            for (TActorIterator<ANBBPlayerController> It(GetWorld()); It; ++It)
-            {
-                ANBBPlayerController* NBBPlayerController = *It;
-                if (IsValid(NBBPlayerController) == true)
-                {
-                    NBBPlayerController->ClientRPCPrintChatMessageString(InChatMessageString);
-                }
-            }
-            return;
-        }
-    }
-
 	FString ChatMessageString = InChatMessageString;
-	int Index = InChatMessageString.Len() - 3;
-	FString GuessNumberString = InChatMessageString.RightChop(Index);
-	if (IsGuessNumberString(GuessNumberString) == true)
+	int ChatIndex = InChatMessageString.Len() - 3;
+	FString GuessNumberString = InChatMessageString.RightChop(ChatIndex);
+
+	ANBBPlayerState* InChatPlayerState = InChattingPlayerController->GetPlayerState<ANBBPlayerState>();
+    // 현재 턴인 플레이어만 추측 가능
+	// 아직 게임 시작 안했는데 숫자야구 포맷으로 전송한 경우 > 그 유저를 1순서로 지정하고 게임 시작
+	// 이미 턴인 유저가 있는경우 > 턴 유저만 숫자야구 포맷 검사
+    //if (CurrentPlayerIndex == -1 && GameState->PlayerArray.IsValidIndex(CurrentPlayerIndex))
+	bool bIsGuessChat =  IsGuessNumberString(GuessNumberString);
+
+	if (bIsGuessChat)
 	{
-		FString JudgeResultString = JudgeResult(SecretNumberString, GuessNumberString);
-
-		IncreaseGuessCount(InChattingPlayerController->GetPlayerState<ANBBPlayerState>());
-
-		for (TActorIterator<ANBBPlayerController> It(GetWorld()); It; ++It)
+		if (CurrentPlayerIndex == -1)
 		{
-			ANBBPlayerController* NBBPlayerController = *It;
-			if (IsValid(NBBPlayerController) == true)
-			{
-				FString CombinedMessageString = InChatMessageString + TEXT(" -> ") + JudgeResultString;
-				NBBPlayerController->ClientRPCPrintChatMessageString(CombinedMessageString);
+			int PS_Index = GameState->PlayerArray.Find(InChatPlayerState);
+			CurrentPlayerIndex = PS_Index;
+		}
+		if (InChatPlayerState ==  GameState->PlayerArray[CurrentPlayerIndex])
+		{
+			FString JudgeResultString = JudgeResult(SecretNumberString, GuessNumberString);
 
-				int32 StrikeCount = FCString::Atoi(*JudgeResultString.Left(1));
-				JudgeGame(InChattingPlayerController->GetPlayerState<ANBBPlayerState>(), StrikeCount);
+			IncreaseGuessCount(InChatPlayerState);
+
+			
+			for (TActorIterator<ANBBPlayerController> It(GetWorld()); It; ++It)
+			{
+				ANBBPlayerController* NBBPlayerController = *It;
+				if (IsValid(NBBPlayerController) == true)
+				{
+					FString CombinedMessageString = InChatMessageString + TEXT(" -> ") + JudgeResultString;
+					NBBPlayerController->ClientRPCPrintChatMessageString(CombinedMessageString);
+				}
 			}
+			
+			int32 StrikeCount = FCString::Atoi(*JudgeResultString.Left(1));
+			JudgeGame(InChatPlayerState, StrikeCount);
 		}
 	}
 	else
@@ -208,6 +206,7 @@ void ANBBGameModeBase::ResetGame()
 			NBBPS->TurnStartTime = -1.f;
 		}
 	}
+	CurrentPlayerIndex = -1;
 }
 
 void ANBBGameModeBase::JudgeGame(ANBBPlayerState* InPlayerState, int InStrikeCount)
@@ -258,36 +257,57 @@ void ANBBGameModeBase::OnTurnTimeout()
     if (GameState->PlayerArray.Num() == 0 || !GameState->PlayerArray.IsValidIndex(CurrentPlayerIndex)) return;
 
     ANBBPlayerState* TimedOutPlayerState = Cast<ANBBPlayerState>(GameState->PlayerArray[CurrentPlayerIndex]);
+
+	// 시간 초과로 인한 횟수 차감 및 다음 턴 시작
+	IncreaseGuessCount(TimedOutPlayerState);
+	
     if (TimedOutPlayerState)
     {
-        // 모든 클라이언트에게 시간 초과 메시지 전송
-        ANBBGameStateBase* NBBGameState = GetGameState<ANBBGameStateBase>();
-        if (NBBGameState)
-        {
-            NBBGameState->MulticastRPCBroadcastTurnTimeout(TimedOutPlayerState->GetPlayerName());
-        }
+    	auto NBBPS = Cast<ANBBPlayerController>(  TimedOutPlayerState->GetPlayerController());
+    	FString CombinedMessageString = TimedOutPlayerState->GetPlayerInfoString() + TEXT(": ") + TEXT("Turn Timeout");
+    	PrintChatMessageString(NBBPS, CombinedMessageString);
     }
 
-    // 시간 초과로 인한 횟수 차감 및 다음 턴 시작
-    IncreaseGuessCount(TimedOutPlayerState);
+
 }
 
 void ANBBGameModeBase::StartNextPlayerTurn()
 {
-    if (GameState->PlayerArray.Num() == 0) return;
-	
-	ANBBPlayerState* CurrentPS = Cast<ANBBPlayerState>(GameState->PlayerArray[CurrentPlayerIndex]);
-	if (CurrentPS)
-	{	// 현재 턴이었던 사람 시간 초기화 와 턴이 아닌 것을 알림
-		CurrentPS->TurnStartTime = -1.f;
-		auto PC = Cast<ANBBPlayerController>( CurrentPS->GetPlayerController());
-		PC->NotificationText = FText::FromString(TEXT("Not your turn"));
+	if (GameState->PlayerArray.Num() == 0) return;
+
+
+	if (CurrentPlayerIndex > -1)
+		if (ANBBPlayerState* CurrentPS = Cast<ANBBPlayerState>(GameState->PlayerArray[CurrentPlayerIndex]))
+		{
+			// 현재 턴이었던 사람 시간 초기화 와 턴이 아닌 것을 알림
+			CurrentPS->TurnStartTime = -1.f;
+			auto PC = Cast<ANBBPlayerController>(CurrentPS->GetPlayerController());
+			PC->NotificationText = FText::FromString(TEXT("Not your turn"));
+		}
+
+	ANBBPlayerState* NextPlayerState = nullptr;
+	// 순환적으로 다음 플레이어 인덱스 계산 다음 턴 진행이 가능한 사람 찾기
+	for (int i = 0; i < AllPlayerControllers.Num(); i++)
+	{
+		int NextIndex = (CurrentPlayerIndex + i) % GameState->PlayerArray.Num();
+		ANBBPlayerState* SearchPlayerState = Cast<ANBBPlayerState>(GameState->PlayerArray[NextIndex]);
+		if (SearchPlayerState->MaxGuessCount <= SearchPlayerState->CurrentGuessCount)
+		{
+			continue;	
+		}
+		CurrentPlayerIndex = NextIndex;
+		NextPlayerState = SearchPlayerState;
+		break;
+	}
+
+	if (NextPlayerState == nullptr)
+	{
+		JudgeGame(nullptr, 0);
+		return;
 	}
 	
-    // 순환적으로 다음 플레이어 인덱스 계산
-    CurrentPlayerIndex = (CurrentPlayerIndex + 1) % GameState->PlayerArray.Num();
 
-	ANBBPlayerState* NextPlayerState = Cast<ANBBPlayerState>(GameState->PlayerArray[CurrentPlayerIndex]);
+	
     ANBBGameStateBase* NBBGameState = GetGameState<ANBBGameStateBase>();
 
     if (NextPlayerState && NBBGameState)
