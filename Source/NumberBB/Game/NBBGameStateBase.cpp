@@ -6,6 +6,7 @@
 #include "Kismet/GameplayStatics.h"
 #include "Player/NBBPlayerController.h"
 #include "EngineUtils.h"
+#include "Net/UnrealNetwork.h"
 
 void ANBBGameStateBase::MulticastRPCBroadcastLoginMessage_Implementation(const FString& InNameString)
 {
@@ -22,6 +23,12 @@ void ANBBGameStateBase::MulticastRPCBroadcastLoginMessage_Implementation(const F
 			}
 		}
 	}
+}
+
+void ANBBGameStateBase::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+	DOREPLIFETIME(ThisClass, bIsRunningGame);
 }
 
 FString ANBBGameStateBase::GenerateSecretNumber()

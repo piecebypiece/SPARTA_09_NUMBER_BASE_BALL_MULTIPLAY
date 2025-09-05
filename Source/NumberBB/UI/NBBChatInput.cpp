@@ -33,10 +33,10 @@ void UNBBChatInput::OnChatInputTextCommitted(const FText& Text, ETextCommit::Typ
 		APlayerController* OwningPlayerController = GetOwningPlayer();
 		if (IsValid(OwningPlayerController) == true)
 		{
-			ANBBPlayerController* OwningCXPlayerController = Cast<ANBBPlayerController>(OwningPlayerController);
-			if (IsValid(OwningCXPlayerController) == true)
+			ANBBPlayerController* OwningNBBPlayerController = Cast<ANBBPlayerController>(OwningPlayerController);
+			if (IsValid(OwningNBBPlayerController) == true)
 			{
-				OwningCXPlayerController->SetChatMessageString(Text.ToString());
+				OwningNBBPlayerController->SetChatMessageString(Text.ToString());
 
 				EditableTextBox_ChatInput->SetText(FText());
 			}

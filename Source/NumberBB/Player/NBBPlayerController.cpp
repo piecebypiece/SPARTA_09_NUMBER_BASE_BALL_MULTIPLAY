@@ -9,8 +9,9 @@
 #include "EngineUtils.h"
 #include "Kismet/GameplayStatics.h"
 #include "Game/NBBGameModeBase.h"
+#include "Game/NBBGameStateBase.h"
 #include "NBBPlayerState.h"
-#include "NBBPlayerController.h"
+#include "Components/TextBlock.h"
 #include "Net/UnrealNetwork.h"
 
 ANBBPlayerController::ANBBPlayerController()
@@ -47,6 +48,14 @@ void ANBBPlayerController::BeginPlay()
 			NotificationTextWidgetInstance->AddToViewport();
 		}
 	}
+	if (IsValid(TimerTextWidgetClass) == true)
+	{
+		TimerTextWidgetInstance = CreateWidget<UUserWidget>(this, TimerTextWidgetClass);
+		if (IsValid(TimerTextWidgetInstance) == true)
+		{
+			TimerTextWidgetInstance->AddToViewport();
+		}
+	}
 }
 
 void ANBBPlayerController::Tick(float DeltaTime)
@@ -59,15 +68,20 @@ void ANBBPlayerController::Tick(float DeltaTime)
 	}
 
 	auto NBBPS = GetPlayerState<ANBBPlayerState>();
-	if (NBBPS == nullptr)
+	ANBBGameStateBase* NBBGameState = GetWorld()->GetGameState<ANBBGameStateBase>();
+	if (NBBPS == nullptr || NBBGameState == nullptr)
 	{
 		return;
 	}
 
-	if (NBBPS->TurnStartTime >= 0.f)
+	if (NBBPS->TurnStartTime > 0.f)
 	{
 		FString Formatted = FString::Printf(TEXT("%.2f sec"), NBBPS->GetRemainingTurnTime());
-		NotificationText = FText::FromString(Formatted);
+		if (UTextBlock* TimerText = Cast<UTextBlock>(TimerTextWidgetInstance->GetWidgetFromName(TEXT("TimerText"))))
+		{
+			TimerText->SetText(FText::FromString(Formatted));
+		}
+		
 	}
 }
 

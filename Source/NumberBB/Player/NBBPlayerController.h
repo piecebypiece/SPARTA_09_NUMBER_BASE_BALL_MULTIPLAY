@@ -50,6 +50,12 @@ protected:
 	
 	UPROPERTY()
 	TObjectPtr<UUserWidget> NotificationTextWidgetInstance;
+
+	UPROPERTY(EditDefaultsOnly)
+	TSubclassOf<UUserWidget> TimerTextWidgetClass;
+	
+	UPROPERTY()
+	TObjectPtr<UUserWidget> TimerTextWidgetInstance;
 public:
 	UPROPERTY(Replicated, BlueprintReadOnly)
 	FText NotificationText;

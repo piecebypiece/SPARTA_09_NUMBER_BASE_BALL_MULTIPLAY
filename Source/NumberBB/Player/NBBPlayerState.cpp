@@ -43,11 +43,3 @@ float ANBBPlayerState::GetRemainingTurnTime() const
     }
     return 0.f;
 }
-
-// void ANBBPlayerState::OnRep_TurnStartTime()
-// {
-//     // TurnStartTime이 클라이언트에서 복제될 때 호출됩니다.
-//     // 여기에 남은 시간을 표시하는 UI 위젯을 업데이트하는 로직을 추가할 수 있습니다.
-// 	auto NBBPlayerController = Cast<ANBBPlayerController>( GetPlayerController());
-//     UE_LOG(LogTemp, Log, TEXT("OnRep_TurnStartTime called. New TurnStartTime: %f"), TurnStartTime);
-// }

@@ -6,7 +6,7 @@
 #include "GameFramework/GameStateBase.h"
 #include "NBBGameStateBase.generated.h"
 
-class ACXPlayerController;
+class ANBBPlayerController;
 
 /**
  *
@@ -16,6 +16,13 @@ class NUMBERBB_API ANBBGameStateBase : public AGameStateBase
 {
 	GENERATED_BODY()
 	
+
+public:
+	ANBBGameStateBase()
+		: bIsRunningGame(false)
+	{
+	}
+	virtual void GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const override;
 public:
 	UFUNCTION(NetMulticast, Reliable)
 	void MulticastRPCBroadcastLoginMessage(const FString& InNameString = FString(TEXT("XXXXXXX")));
@@ -23,4 +30,8 @@ public:
 
 	bool IsGuessNumberString(const FString& InNumberString);
 	const float TurnTime = 7.f;
+
+
+	UPROPERTY(Replicated)
+	bool bIsRunningGame;
 };

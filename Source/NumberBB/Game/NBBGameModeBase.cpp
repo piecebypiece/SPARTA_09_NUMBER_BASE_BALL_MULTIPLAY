@@ -48,7 +48,7 @@ FString ANBBGameModeBase::GenerateSecretNumber()
 		Result.Append(FString::FromInt(Numbers[Index]));
 		Numbers.RemoveAt(Index);
 	}
-
+	UE_LOG(LogTemp, Log, TEXT("SecretNumberString :%s"), *Result);
 	return Result;
 }
 
@@ -144,6 +144,8 @@ void ANBBGameModeBase::PrintChatMessageString(ANBBPlayerController* InChattingPl
 		{
 			int PS_Index = GameState->PlayerArray.Find(InChatPlayerState);
 			CurrentPlayerIndex = PS_Index;
+			
+			Cast<ANBBGameStateBase>(GameState)->bIsRunningGame = true;
 		}
 		if (InChatPlayerState ==  GameState->PlayerArray[CurrentPlayerIndex])
 		{
@@ -196,7 +198,6 @@ void ANBBGameModeBase::IncreaseGuessCount(ANBBPlayerState* InPlayerState)
 void ANBBGameModeBase::ResetGame()
 {
 	SecretNumberString = GenerateSecretNumber();
-
 	for (const auto& NBBPlayerController : AllPlayerControllers)
 	{
 		ANBBPlayerState* NBBPS = NBBPlayerController->GetPlayerState<ANBBPlayerState>();
@@ -207,6 +208,7 @@ void ANBBGameModeBase::ResetGame()
 		}
 	}
 	CurrentPlayerIndex = -1;
+	Cast<ANBBGameStateBase>(GameState)->bIsRunningGame = false;
 }
 
 void ANBBGameModeBase::JudgeGame(ANBBPlayerState* InPlayerState, int InStrikeCount)
@@ -289,7 +291,7 @@ void ANBBGameModeBase::StartNextPlayerTurn()
 	// 순환적으로 다음 플레이어 인덱스 계산 다음 턴 진행이 가능한 사람 찾기
 	for (int i = 0; i < AllPlayerControllers.Num(); i++)
 	{
-		int NextIndex = (CurrentPlayerIndex + i) % GameState->PlayerArray.Num();
+		int NextIndex = (CurrentPlayerIndex + i + 1) % GameState->PlayerArray.Num();
 		ANBBPlayerState* SearchPlayerState = Cast<ANBBPlayerState>(GameState->PlayerArray[NextIndex]);
 		if (SearchPlayerState->MaxGuessCount <= SearchPlayerState->CurrentGuessCount)
 		{
